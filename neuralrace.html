@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolving Organisms to Navigate a Track</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Deep navy blue background */
+        }
+        canvas {
+            background-color: #1f2937; /* A slightly lighter gray for the canvas */
+            border-radius: 0.5rem;
+        }
+        /* Custom styling for the range slider thumb for better aesthetics */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #38bdf8; /* Vibrant sky blue */
+            cursor: pointer;
+            border-radius: 9999px;
+            margin-top: -6px; /* Center the thumb on the track */
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #38bdf8;
+            cursor: pointer;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300 flex flex-col items-center min-h-screen p-4 sm:p-6 lg:p-8">
+
+    <div class="w-full max-w-7xl mx-auto text-center mb-8">
+        <h1 class="text-3xl sm:text-4xl font-bold text-sky-400 mb-2">Neuroevolution: Track Training 🏎️</h1>
+        <p class="text-gray-400 max-w-3xl mx-auto">
+            A population of organisms learns to navigate a track using neural networks. Their fitness is determined by how many waypoints they can reach before running out of time or crashing.
+            <strong class="text-white block mt-2">Click on an organism to view its neural network.</strong>
+        </p>
+    </div>
+
+    <div id="main-container" class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        
+        <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-4 lg:col-span-2 xl:col-span-2">
+            <h2 class="text-lg font-semibold text-white text-center mb-4">World</h2>
+            <canvas id="worldCanvas" class="w-full h-auto aspect-square"></canvas>
+        </div>
+
+        <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-4 lg:col-span-1 xl:col-span-1">
+            <h2 class="text-lg font-semibold text-white text-center mb-4">Selected Organism's Brain</h2>
+            <canvas id="nnCanvas" class="w-full h-auto aspect-[5/4]"></canvas>
+            <div id="organismInfo" class="mt-4 text-sm text-center text-gray-400">
+                No organism selected.
+            </div>
+        </div>
+
+        <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6 lg:col-span-3 xl:col-span-1 flex flex-col gap-6">
+            <h2 class="text-lg font-semibold text-white text-center">Controls & Stats</h2>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button id="startPauseBtn" class="flex items-center justify-center w-full px-4 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 focus:ring-offset-gray-900 transition-colors">
+                    <svg id="playIcon" class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
+                    <svg id="pauseIcon" class="h-5 w-5 mr-2 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                    <span id="startPauseText">Start</span>
+                </button>
+                <button id="resetBtn" class="flex items-center justify-center w-full px-4 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-900 transition-colors">
+                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.181-3.183m-11.664 0l4.992-4.993m-4.993 0l-3.181 3.183a8.25 8.25 0 000 11.664l3.181 3.183" /></svg>
+                    <span>Reset</span>
+                </button>
+            </div>
+
+            <div class="space-y-2">
+                <label for="speedSlider" class="flex justify-between text-sm font-medium text-gray-300">
+                    <span>Simulation Speed</span>
+                    <span id="speedValue" class="font-semibold text-sky-400">1</span>
+                </label>
+                <input type="range" id="speedSlider" min="1" max="10" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <span class="text-gray-400 col-span-2 text-center font-bold text-white">Simulation Stats</span>
+                <span class="text-gray-400">Generation:</span><span id="generation" class="font-mono text-white font-semibold text-right">1</span>
+                <span class="text-gray-400">Time:</span><span id="worldTime" class="font-mono text-white font-semibold text-right">0</span>
+                <span class="text-gray-400">Population:</span><span id="population" class="font-mono text-white font-semibold text-right">0</span>
+                <span class="text-green-400">Best Fitness:</span><span id="bestFitness" class="font-mono text-green-400 font-semibold text-right">0</span>
+                <span class="text-sky-400">Avg Fitness:</span><span id="avgFitness" class="font-mono text-sky-400 font-semibold text-right">0.0</span>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- UTILITY FUNCTIONS ---
+const utils = {
+    randn_bm: () => {
+        let u = 0, v = 0;
+        while(u === 0) u = Math.random();
+        while(v === 0) v = Math.random();
+        return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+    },
+    leakyRelu: (x) => Math.max(0.01 * x, x),
+    dist: (x1, y1, x2, y2) => Math.sqrt((x2 - x1)**2 + (y2 - y1)**2),
+    // Line-segment intersection function
+    getIntersection: (A, B, C, D) => {
+        const tTop = (D.x - C.x) * (A.y - C.y) - (D.y - C.y) * (A.x - C.x);
+        const uTop = (C.y - A.y) * (A.x - B.x) - (C.x - A.x) * (A.y - B.y);
+        const bottom = (D.y - C.y) * (B.x - A.x) - (D.x - C.x) * (B.y - A.y);
+        if (bottom !== 0) {
+            const t = tTop / bottom;
+            const u = uTop / bottom;
+            if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+                return {
+                    x: A.x + t * (B.x - A.x),
+                    y: A.y + t * (B.y - A.y),
+                };
+            }
+        }
+        return null;
+    }
+};
+
+// --- NEURAL NETWORK CLASS ---
+class NeuralNetwork {
+    constructor(inputNodes, hiddenNodes, outputNodes) {
+        this.inputNodes = inputNodes;
+        this.hiddenNodes = hiddenNodes;
+        this.outputNodes = outputNodes;
+        this.weights_ih = Array(this.hiddenNodes).fill(0).map(() => Array(this.inputNodes).fill(0).map(() => utils.randn_bm() * Math.sqrt(1 / this.inputNodes)));
+        this.weights_ho = Array(this.outputNodes).fill(0).map(() => Array(this.hiddenNodes).fill(0).map(() => utils.randn_bm() * Math.sqrt(1 / this.hiddenNodes)));
+        this.bias_h = Array(this.hiddenNodes).fill(0);
+        this.bias_o = Array(this.outputNodes).fill(0);
+        this.lastInput = null;
+        this.lastHidden = null;
+        this.lastOutput = null;
+    }
+
+    predict(inputArray) {
+        this.lastInput = inputArray;
+        let hidden = Array(this.hiddenNodes).fill(0);
+        for (let i = 0; i < this.hiddenNodes; i++) {
+            let sum = 0;
+            for (let j = 0; j < this.inputNodes; j++) {
+                sum += inputArray[j] * this.weights_ih[i][j];
+            }
+            hidden[i] = utils.leakyRelu(sum + this.bias_h[i]);
+        }
+        this.lastHidden = hidden;
+        let output = Array(this.outputNodes).fill(0);
+        for (let i = 0; i < this.outputNodes; i++) {
+            let sum = 0;
+            for (let j = 0; j < this.hiddenNodes; j++) {
+                sum += hidden[j] * this.weights_ho[i][j];
+            }
+            output[i] = Math.tanh(sum + this.bias_o[i]); // tanh for outputs between -1 and 1
+        }
+        this.lastOutput = output;
+        return output;
+    }
+    
+    copy() {
+        const newNN = new NeuralNetwork(this.inputNodes, this.hiddenNodes, this.outputNodes);
+        newNN.weights_ih = this.weights_ih.map(row => [...row]);
+        newNN.weights_ho = this.weights_ho.map(row => [...row]);
+        newNN.bias_h = [...this.bias_h];
+        newNN.bias_o = [...this.bias_o];
+        return newNN;
+    }
+    
+    mutate(rate, intensity) {
+        const mutateMatrix = (matrix) => {
+            for (let i = 0; i < matrix.length; i++) {
+                for (let j = 0; j < matrix[i].length; j++) {
+                    if (Math.random() < rate) matrix[i][j] += utils.randn_bm() * intensity;
+                }
+            }
+        };
+        const mutateArray = (arr) => {
+            for (let i = 0; i < arr.length; i++) {
+                if (Math.random() < rate) arr[i] += utils.randn_bm() * intensity;
+            }
+        };
+        mutateMatrix(this.weights_ih);
+        mutateMatrix(this.weights_ho);
+        mutateArray(this.bias_h);
+        mutateArray(this.bias_o);
+    }
+}
+
+// --- ORGANISM CLASS ---
+class Organism {
+    constructor(world, brain = null) {
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.world = world;
+        this.x = world.track.spawn.x;
+        this.y = world.track.spawn.y;
+        this.angle = world.track.spawn.angle;
+        this.vx = 0;
+        this.vy = 0;
+        this.energy = 100;
+        this.size = 5;
+        this.color = 'rgba(96, 165, 250, 1)';
+        this.isDead = false;
+
+        this.fitness = 0;
+        this.nextWaypointIndex = 1;
+        
+        // Brain: 8 inputs, 10 hidden nodes, 2 outputs
+        this.brain = brain ? brain.copy() : new NeuralNetwork(8, 10, 2);
+        
+        // Whiskers for wall detection
+        this.whiskers = [0, -Math.PI / 4, Math.PI / 4]; // [forward, 45deg left, 45deg right]
+        this.whiskerLength = 60;
+        this.whiskerReadings = [1, 1, 1]; // Store normalized readings
+    }
+
+    sense() {
+        // --- 1. Sense Walls with Whiskers ---
+        const wallPoints = this.world.track.walls;
+        for (let i = 0; i < this.whiskers.length; i++) {
+            const angle = this.angle + this.whiskers[i];
+            const endX = this.x + this.whiskerLength * Math.cos(angle);
+            const endY = this.y + this.whiskerLength * Math.sin(angle);
+            
+            let closestDist = this.whiskerLength;
+            for (const wall of wallPoints) {
+                const intersection = utils.getIntersection({x: this.x, y: this.y}, {x: endX, y: endY}, wall.start, wall.end);
+                if (intersection) {
+                    const dist = utils.dist(this.x, this.y, intersection.x, intersection.y);
+                    if (dist < closestDist) closestDist = dist;
+                }
+            }
+            this.whiskerReadings[i] = 1 - (closestDist / this.whiskerLength); // Normalize: 1 = touching, 0 = far
+        }
+
+        // --- 2. Sense Next Waypoint ---
+        const nextWaypoint = this.world.track.path[this.nextWaypointIndex];
+        const vectorToWaypoint = {
+            x: nextWaypoint.x - this.x,
+            y: nextWaypoint.y - this.y
+        };
+        // Rotate vector to be relative to organism's angle
+        const angleToWaypoint = Math.atan2(vectorToWaypoint.y, vectorToWaypoint.x) - this.angle;
+        const normalizedAngle = Math.atan2(Math.sin(angleToWaypoint), Math.cos(angleToWaypoint)) / Math.PI; // Normalize to [-1, 1]
+        
+        // --- 3. Gather all inputs ---
+        return [
+            this.whiskerReadings[0],
+            this.whiskerReadings[1],
+            this.whiskerReadings[2],
+            normalizedAngle,
+            this.vx / 3, // Normalized velocity
+            this.vy / 3,
+            this.energy / 100,
+            1 // Bias node
+        ];
+    }
+    
+    update() {
+        if (this.isDead) return;
+
+        const inputs = this.sense();
+        const outputs = this.brain.predict(inputs); // [turn, throttle]
+
+        // --- Update Movement ---
+        const turn = outputs[0];      // -1 to 1
+        const throttle = (outputs[1] + 1) / 2; // 0 to 1
+
+        this.angle += turn * 0.1; // Adjust turn sensitivity
+        
+        const forceX = Math.cos(this.angle) * throttle * 0.2;
+        const forceY = Math.sin(this.angle) * throttle * 0.2;
+
+        this.vx += forceX;
+        this.vy += forceY;
+        this.vx *= 0.95; // Friction
+        this.vy *= 0.95;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        this.energy -= 0.05; // Metabolic cost
+
+        // --- Check for Events ---
+        this.checkWaypointCollision();
+        this.checkWallCollision();
+
+        if (this.energy <= 0) {
+            this.isDead = true;
+        }
+    }
+    
+    checkWallCollision() {
+        for (const wall of this.world.track.walls) {
+            // A simple check is to see if any whisker reading is very high
+            if (this.whiskerReadings.some(r => r > 0.95 && utils.dist(this.vx, this.vy, 0, 0) > 0.1)) {
+                 this.isDead = true;
+                 this.color = 'rgba(239, 68, 68, 0.5)'; // Turn red on death
+                 return;
+            }
+        }
+         // Die if it hits the outer boundaries
+        if (this.x < this.size || this.x > this.world.size - this.size || this.y < this.size || this.y > this.world.size - this.size) {
+            this.isDead = true;
+            this.color = 'rgba(239, 68, 68, 0.5)';
+        }
+    }
+
+    checkWaypointCollision() {
+        const nextWaypoint = this.world.track.path[this.nextWaypointIndex];
+        if (utils.dist(this.x, this.y, nextWaypoint.x, nextWaypoint.y) < 20) {
+            this.fitness += 1;
+            this.energy = Math.min(100, this.energy + 25); // Refuel
+            this.nextWaypointIndex++;
+            if (this.nextWaypointIndex >= this.world.track.path.length) {
+                this.nextWaypointIndex = 0; // Loop back
+                this.fitness += 10; // Bonus for completing a lap
+            }
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        // Draw body
+        ctx.beginPath();
+        ctx.moveTo(this.size, 0);
+        ctx.lineTo(-this.size, -this.size / 1.5);
+        ctx.lineTo(-this.size, this.size / 1.5);
+        ctx.closePath();
+        ctx.fillStyle = this.isDead ? this.color : `rgba(96, 165, 250, ${this.energy/100})`;
+        ctx.fill();
+
+        ctx.restore();
+        
+        // Draw whiskers if this is the selected organism
+        if (this.world.selectedOrganism === this) {
+            for (let i = 0; i < this.whiskers.length; i++) {
+                const angle = this.angle + this.whiskers[i];
+                const endX = this.x + this.whiskerLength * (1 - this.whiskerReadings[i]) * Math.cos(angle);
+                const endY = this.y + this.whiskerLength * (1 - this.whiskerReadings[i]) * Math.sin(angle);
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = this.whiskerReadings[i] > 0.8 ? 'red' : 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+    }
+}
+
+
+// --- MAIN SIMULATION SCRIPT ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Canvas and context setup
+    const worldCanvas = document.getElementById('worldCanvas');
+    const nnCanvas = document.getElementById('nnCanvas');
+    worldCanvas.width = 600; worldCanvas.height = 600;
+    nnCanvas.width = 500; nnCanvas.height = 400;
+    const worldCtx = worldCanvas.getContext('2d');
+    const nnCtx = nnCanvas.getContext('2d');
+
+    // UI Elements and Simulation State
+    let world, isRunning = false, animationFrameId;
+    let updatesPerFrame = 1, selectedOrganism = null;
+    const POPULATION_SIZE = 50;
+    const GENERATION_TIME = 1500; // in frames
+    const MUTATION_RATE = 0.1;
+    const MUTATION_INTENSITY = 0.1;
+
+    function defineTrack(worldSize) {
+        const cornerSize = worldSize * 0.25;
+        const pathMargin = worldSize * 0.15;
+        return {
+            walls: [
+                // Top-left corner
+                { start: { x: 0, y: cornerSize }, end: { x: cornerSize, y: 0 } },
+                // Top-right corner
+                { start: { x: worldSize - cornerSize, y: 0 }, end: { x: worldSize, y: cornerSize } },
+                // Bottom-right corner
+                { start: { x: worldSize, y: worldSize - cornerSize }, end: { x: worldSize - cornerSize, y: worldSize } },
+                // Bottom-left corner
+                { start: { x: cornerSize, y: worldSize }, end: { x: 0, y: worldSize - cornerSize } }
+            ],
+            spawn: { x: pathMargin, y: worldSize / 2, angle: 0 },
+            path: [
+                {x: pathMargin, y: worldSize / 2},
+                {x: worldSize / 2, y: pathMargin},
+                {x: worldSize - pathMargin, y: worldSize / 2},
+                {x: worldSize / 2, y: worldSize - pathMargin},
+            ]
+        };
+    }
+
+    // --- NN VISUALIZATION ---
+    function drawNN() {
+        nnCtx.clearRect(0, 0, nnCanvas.width, nnCanvas.height);
+        if (!selectedOrganism) {
+             nnCtx.fillStyle = '#6b7280'; nnCtx.textAlign = 'center'; nnCtx.textBaseline = 'middle';
+             nnCtx.font = '14px Inter';
+             nnCtx.fillText('Click an organism to view its brain.', nnCanvas.width / 2, nnCanvas.height / 2);
+            return;
+        }
+        const brain = selectedOrganism.brain;
+        const margin = 50, left = margin + 60, right = nnCanvas.width - margin, top = margin, bottom = nnCanvas.height - margin;
+        const layerX = [left, nnCanvas.width / 2, right];
+        const nodeCounts = [brain.inputNodes, brain.hiddenNodes, brain.outputNodes];
+        const activations = [brain.lastInput, brain.lastHidden, brain.lastOutput];
+        const labels = [['Whisker F', 'Whisker L', 'Whisker R', 'Target Angle', 'Vel X', 'Vel Y', 'Energy', 'Bias'], null, ['Turn', 'Throttle']];
+        const getNodeY = (index, total) => top + (bottom - top) * (index + 0.5) / total;
+
+        const drawConnections = (weights, x1, x2, count1, count2) => {
+             for (let i = 0; i < count2; i++) {
+                for (let j = 0; j < count1; j++) {
+                    const weight = weights[i][j];
+                    nnCtx.beginPath(); nnCtx.moveTo(x1, getNodeY(j, count1)); nnCtx.lineTo(x2, getNodeY(i, count2));
+                    nnCtx.strokeStyle = weight > 0 ? `rgba(96, 165, 250, ${Math.min(Math.abs(weight), 0.6)})` : `rgba(248, 113, 113, ${Math.min(Math.abs(weight), 0.6)})`;
+                    nnCtx.lineWidth = Math.min(Math.abs(weight) * 2, 3); nnCtx.stroke();
+                }
+            }
+        };
+        drawConnections(brain.weights_ih, layerX[0], layerX[1], nodeCounts[0], nodeCounts[1]);
+        drawConnections(brain.weights_ho, layerX[1], layerX[2], nodeCounts[1], nodeCounts[2]);
+
+        for (let i = 0; i < layerX.length; i++) {
+            for (let j = 0; j < nodeCounts[i]; j++) {
+                const y = getNodeY(j, nodeCounts[i]);
+                const activationValue = (activations[i] && activations[i][j]) ? activations[i][j] : 0;
+                const brightness = 50 + 50 * Math.abs(activationValue);
+                const color = activationValue !== 0 ? (activationValue > 0 ? `hsl(200, 100%, ${brightness}%)` : `hsl(0, 90%, ${brightness}%)`) : '#374151';
+                nnCtx.beginPath(); nnCtx.arc(layerX[i], y, 8, 0, 2 * Math.PI); nnCtx.fillStyle = color; nnCtx.fill();
+                if (labels[i] && labels[i][j]) {
+                    nnCtx.fillStyle = '#d1d5db'; nnCtx.textAlign = (i > 1) ? 'left' : 'right'; nnCtx.textBaseline = 'middle'; nnCtx.font = '10px Inter';
+                    const labelX = (i > 1) ? layerX[i] + 15 : layerX[i] - 15;
+                    nnCtx.fillText(labels[i][j], labelX, y);
+                }
+            }
+        }
+    }
+    
+    // --- SIMULATION CONTROL ---
+    function init(fittestBrains = []) {
+        world = {
+            organisms: [],
+            size: worldCanvas.width,
+            time: 0,
+            generation: (world ? world.generation : 0) + 1,
+            lastGenStats: { best: 0, avg: 0 },
+            selectedOrganism: null,
+            track: defineTrack(worldCanvas.width)
+        };
+        
+        // Carry over stats from previous generation
+        if (fittestBrains.length > 0) {
+            const lastGenFitness = fittestBrains.map(o => o.fitness);
+            world.lastGenStats.best = Math.max(...lastGenFitness);
+            world.lastGenStats.avg = lastGenFitness.reduce((a,b) => a+b, 0) / lastGenFitness.length;
+        }
+
+        for (let i = 0; i < POPULATION_SIZE; i++) {
+            let brain = null;
+            if (fittestBrains.length > 0) {
+                // Create new generation from the fittest of the last
+                const parentBrain = fittestBrains[i % fittestBrains.length].brain;
+                brain = parentBrain.copy();
+                brain.mutate(MUTATION_RATE, MUTATION_INTENSITY);
+            }
+            world.organisms.push(new Organism(world, brain));
+        }
+        selectedOrganism = null;
+        world.selectedOrganism = null;
+    }
+
+    function startNextGeneration() {
+        // Sort by fitness (higher is better)
+        world.organisms.sort((a, b) => b.fitness - a.fitness);
+
+        // Select the top 20% to be parents for the next generation
+        const eliteCount = Math.ceil(POPULATION_SIZE * 0.2);
+        const fittestOrganisms = world.organisms.slice(0, eliteCount);
+
+        // Reset the simulation with the new generation
+        init(fittestOrganisms);
+    }
+    
+    function updateWorld() {
+        for (const org of world.organisms) {
+            org.update();
+        }
+        world.time++;
+        if (world.time >= GENERATION_TIME) {
+            startNextGeneration();
+        }
+    }
+    
+    function drawWorld() {
+        worldCtx.clearRect(0, 0, world.size, world.size);
+
+        // Draw waypoints
+        for (const waypoint of world.track.path) {
+            worldCtx.beginPath(); worldCtx.arc(waypoint.x, waypoint.y, 10, 0, 2 * Math.PI);
+            worldCtx.fillStyle = 'rgba(74, 222, 128, 0.3)'; worldCtx.fill();
+        }
+        
+        // Draw walls
+        worldCtx.strokeStyle = 'rgba(252, 165, 165, 0.8)';
+        worldCtx.lineWidth = 4;
+        for (const wall of world.track.walls) {
+            worldCtx.beginPath();
+            worldCtx.moveTo(wall.start.x, wall.start.y);
+            worldCtx.lineTo(wall.end.x, wall.end.y);
+            worldCtx.stroke();
+        }
+
+        // Draw organisms
+        for (const org of world.organisms) { org.draw(worldCtx); }
+        
+        // Highlight the selected organism
+        if (selectedOrganism) {
+            worldCtx.beginPath();
+            worldCtx.arc(selectedOrganism.x, selectedOrganism.y, selectedOrganism.size + 4, 0, 2*Math.PI);
+            worldCtx.strokeStyle = '#facc15'; worldCtx.lineWidth = 2; worldCtx.stroke();
+        }
+    }
+    
+    function updateUI() {
+        document.getElementById('generation').textContent = world.generation;
+        document.getElementById('worldTime').textContent = `${world.time} / ${GENERATION_TIME}`;
+        const aliveCount = world.organisms.filter(o => !o.isDead).length;
+        document.getElementById('population').textContent = `${aliveCount} / ${POPULATION_SIZE}`;
+        document.getElementById('bestFitness').textContent = world.lastGenStats.best;
+        document.getElementById('avgFitness').textContent = world.lastGenStats.avg.toFixed(2);
+
+        if (selectedOrganism) {
+            organismInfoEl.innerHTML = `
+                <span class="font-bold text-sky-400">ID: ${selectedOrganism.id}</span><br>
+                Fitness: ${selectedOrganism.fitness} | Energy: ${selectedOrganism.energy.toFixed(0)} <br>
+                Next Waypoint: ${selectedOrganism.nextWaypointIndex}
+            `;
+        } else {
+            organismInfoEl.textContent = 'No organism selected.';
+        }
+    }
+
+    function gameLoop() {
+        if (!isRunning) return;
+        for (let i = 0; i < updatesPerFrame; i++) { updateWorld(); }
+        drawWorld();
+        drawNN();
+        updateUI();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function handleSelection(event) {
+        const rect = worldCanvas.getBoundingClientRect();
+        const scaleX = worldCanvas.width / rect.width;
+        const scaleY = worldCanvas.height / rect.height;
+        const x = (event.clientX - rect.left) * scaleX;
+        const y = (event.clientY - rect.top) * scaleY;
+
+        let clickedOn = null, min_dist = 15;
+        for (const org of world.organisms) {
+            const d = utils.dist(x, y, org.x, org.y);
+            if (d < min_dist) { min_dist = d; clickedOn = org; }
+        }
+        selectedOrganism = clickedOn;
+        world.selectedOrganism = clickedOn; // Make globally accessible
+        if(!isRunning) { drawWorld(); drawNN(); updateUI(); }
+    }
+    
+    // --- Event Listeners ---
+    const startPauseBtn = document.getElementById('startPauseBtn');
+    const startPauseText = document.getElementById('startPauseText');
+    const playIcon = document.getElementById('playIcon');
+    const pauseIcon = document.getElementById('pauseIcon');
+    const resetBtn = document.getElementById('resetBtn');
+    const speedSlider = document.getElementById('speedSlider');
+    const organismInfoEl = document.getElementById('organismInfo');
+
+    worldCanvas.addEventListener('click', handleSelection);
+    startPauseBtn.addEventListener('click', () => {
+        isRunning = !isRunning;
+        startPauseText.textContent = isRunning ? 'Pause' : 'Start';
+        playIcon.classList.toggle('hidden', isRunning);
+        pauseIcon.classList.toggle('hidden', !isRunning);
+        if (isRunning) gameLoop(); else cancelAnimationFrame(animationFrameId);
+    });
+    resetBtn.addEventListener('click', () => {
+        if(isRunning) { isRunning = false; cancelAnimationFrame(animationFrameId); }
+        startPauseText.textContent = 'Start';
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+        world.generation = 0; // Full reset
+        init(); 
+        drawWorld(); drawNN(); updateUI();
+    });
+    speedSlider.addEventListener('input', (e) => {
+        updatesPerFrame = parseInt(e.target.value, 10);
+        document.getElementById('speedValue').textContent = updatesPerFrame;
+    });
+
+    // --- Initial Call ---
+    init(); drawWorld(); drawNN(); updateUI();
+});
+</script>
+
+</body>
+</html>
